@@ -40,6 +40,7 @@ const Cropper: FC<CropperProps> = ({
   const dragStartPosition = useRef({ x: 0, y: 0 });
   const lastPinchDistance = useRef<number>(0);
   const onTouch = useRef<boolean>(false);
+  const isMounted = useRef<boolean>(false);
 
   useEffect(() => {
     if (imageSize.width === 0 || imageSize.height === 0) return;
@@ -50,6 +51,21 @@ const Cropper: FC<CropperProps> = ({
     setNewZoom(zoom, point);
     emitCropData();
   }, [zoom]);
+
+  useEffect(() => {
+    if (!isMounted.current) {
+      if (imageSize.width && imageSize.height) {
+        const point = {
+          x: cropSize.width / 2,
+          y: cropSize.height / 2,
+        };
+        setNewZoom(zoom, point);
+        emitCropData();
+
+        isMounted.current = true;
+      }
+    }
+  }, [imageSize, cropSize]);
 
   useEffect(() => {
     imgSizeInit();

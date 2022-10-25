@@ -100,7 +100,7 @@ export function getInitialCropFromCroppedAreaPixels(
 
 export const createImage = async (url: string) =>
   new Promise((resolve, reject) => {
-    const image = new Image();
+    const image: HTMLImageElement = new Image();
     image.addEventListener('load', () => resolve(image));
     image.addEventListener('error', (error) => reject(error));
     image.setAttribute('crossOrigin', 'anonymous'); // needed to avoid cross-origin issues on CodeSandbox
@@ -112,34 +112,38 @@ export const createImage = async (url: string) =>
  * @param {File} image - Image File url
  * @param {Object} pixelCrop - pixelCrop Object
  */
-export default async function getCroppedImg(
-  imageSrc: string,
-  pixelCrop: Area,
-  canvasSize: Size = {
-    width: 1200,
-    height: 1200,
-  },
-) {
+export default async function getCroppedImg(imageSrc: string, pixelCrop: Area) {
   const image: any = await createImage(imageSrc);
   const canvas = document.createElement('canvas');
-  const WIDTH = canvasSize.width;
-  const HEIGHT = canvasSize.height;
-  canvas.width = WIDTH;
-  canvas.height = HEIGHT;
-  const ctx = <CanvasRenderingContext2D>canvas.getContext('2d');
+  const ctx = canvas.getContext('2d');
+  const safeArea = Math.max(image.width, image.height) * 2;
 
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-  ctx.drawImage(
-    image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
-    0,
-    0,
-    WIDTH,
-    HEIGHT,
+  canvas.width = safeArea;
+  canvas.height = safeArea;
+
+  if (!ctx) {
+    return null;
+  }
+
+  const getRadianAngle = (degreeValue: number) => (degreeValue * Math.PI) / 180;
+
+  ctx.translate(safeArea / 2, safeArea / 2);
+  ctx.rotate(getRadianAngle(0));
+  ctx.translate(-safeArea / 2, -safeArea / 2);
+
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, safeArea, safeArea);
+  ctx.drawImage(image, safeArea / 2 - image.width * 0.5, safeArea / 2 - image.height * 0.5);
+
+  const data = ctx.getImageData(0, 0, safeArea, safeArea);
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.putImageData(
+    data,
+    0 - safeArea / 2 + image.width * 0.5 - pixelCrop.x,
+    0 - safeArea / 2 + image.height * 0.5 - pixelCrop.y,
   );
 
   // As Base64 string
