@@ -10,7 +10,7 @@ import {
   getDistanceBetweenPoints,
   getCenter,
 } from '../../utils/Utils';
-import type { CropperProps, Size, Point } from '../../types';
+import type { CropperProps, Size, Point, GestureEvent } from '../../types';
 
 const Cropper: FC<CropperProps> = ({
   src,
@@ -41,6 +41,8 @@ const Cropper: FC<CropperProps> = ({
   const lastPinchDistance = useRef<number>(0);
   const onTouch = useRef<boolean>(false);
   const isMounted = useRef<boolean>(false);
+  const [gestureZoomStart, setGestureZoomStart] = useState<number>(0);
+  const [gestureRotationStart, setGestureRotationStart] = useState<number>(0);
 
   useEffect(() => {
     if (imageSize.width === 0 || imageSize.height === 0) return;
@@ -74,11 +76,15 @@ const Cropper: FC<CropperProps> = ({
 
   useEffect(() => {
     window.addEventListener('resize', imgResize);
+    window.addEventListener('gesturestart', onGestureStart as EventListener);
     imgResize();
     return () => {
       window.removeEventListener('resize', imgResize);
+      window.removeEventListener('gesturestart', preventZoomSafari);
     };
   }, [aspect]);
+
+  const preventZoomSafari = (e: Event) => e.preventDefault();
 
   const imgSizeInit = () => {
     const img = new Image();
@@ -155,12 +161,12 @@ const Cropper: FC<CropperProps> = ({
     setCrop((crop: Point) => ({ ...crop, x: 0, y: 0 }));
   };
 
-  const getMousePoint = (e: MouseEvent | React.MouseEvent) => ({
+  const getMousePoint = (e: MouseEvent | React.MouseEvent | GestureEvent) => ({
     x: Number(e.clientX),
     y: Number(e.clientY),
   });
 
-  const getTouchPoint = (touch: Touch | React.Touch) => ({
+  const getTouchPoint = (touch: Touch | React.Touch | GestureEvent) => ({
     x: Number(touch.clientX),
     y: Number(touch.clientY),
   });
@@ -188,6 +194,8 @@ const Cropper: FC<CropperProps> = ({
     document.removeEventListener('mouseup', onDragStopped);
     document.removeEventListener('touchmove', onTouchMove);
     document.removeEventListener('touchend', onDragStopped);
+    document.removeEventListener('gesturemove', onGestureMove as EventListener);
+    document.removeEventListener('gestureend', onGestureEnd as EventListener);
   };
 
   const onDragStopped = () => {
@@ -290,6 +298,26 @@ const Cropper: FC<CropperProps> = ({
     } else if (e.touches.length === 1) {
       onDrag(getTouchPoint(e.touches[0]));
     }
+  };
+
+  const onGestureStart = (e: GestureEvent) => {
+    e.preventDefault();
+    document.addEventListener('gesturechange', onGestureMove as EventListener);
+    document.addEventListener('gestureend', onGestureEnd as EventListener);
+    setGestureZoomStart(zoom);
+  };
+
+  const onGestureMove = (e: GestureEvent) => {
+    e.preventDefault();
+    if (onTouch.current) return;
+
+    const point = getMousePoint(e);
+    const newZoom = gestureZoomStart - 1 + e.scale;
+    setNewZoom(newZoom, point);
+  };
+
+  const onGestureEnd = (e: GestureEvent) => {
+    cleanEvents();
   };
 
   const onDragStart = ({ x, y }: Point) => {

@@ -37,3 +37,10 @@ export interface CropperProps {
     readonly height: number;
   };
 }
+
+export type GestureEvent = UIEvent & {
+  readonly rotation: number;
+  readonly scale: number;
+  readonly clientX: number;
+  readonly clientY: number;
+};

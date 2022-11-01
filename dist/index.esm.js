@@ -772,6 +772,8 @@ var Cropper = function (_a) {
     var lastPinchDistance = useRef(0);
     var onTouch = useRef(false);
     var isMounted = useRef(false);
+    var _q = useState(0), gestureZoomStart = _q[0], setGestureZoomStart = _q[1];
+    var _r = useState(0); _r[0]; _r[1];
     useEffect(function () {
         if (imageSize.width === 0 || imageSize.height === 0)
             return;
@@ -801,11 +803,14 @@ var Cropper = function (_a) {
     }, [src]);
     useEffect(function () {
         window.addEventListener('resize', imgResize);
+        window.addEventListener('gesturestart', onGestureStart);
         imgResize();
         return function () {
             window.removeEventListener('resize', imgResize);
+            window.removeEventListener('gesturestart', preventZoomSafari);
         };
     }, [aspect]);
+    var preventZoomSafari = function (e) { return e.preventDefault(); };
     var imgSizeInit = function () {
         var img = new Image();
         img.addEventListener('load', function () {
@@ -908,6 +913,8 @@ var Cropper = function (_a) {
         document.removeEventListener('mouseup', onDragStopped);
         document.removeEventListener('touchmove', onTouchMove);
         document.removeEventListener('touchend', onDragStopped);
+        document.removeEventListener('gesturemove', onGestureMove);
+        document.removeEventListener('gestureend', onGestureEnd);
     };
     var onDragStopped = function () {
         cleanEvents();
@@ -997,6 +1004,23 @@ var Cropper = function (_a) {
         else if (e.touches.length === 1) {
             onDrag(getTouchPoint(e.touches[0]));
         }
+    };
+    var onGestureStart = function (e) {
+        e.preventDefault();
+        document.addEventListener('gesturechange', onGestureMove);
+        document.addEventListener('gestureend', onGestureEnd);
+        setGestureZoomStart(zoom);
+    };
+    var onGestureMove = function (e) {
+        e.preventDefault();
+        if (onTouch.current)
+            return;
+        var point = getMousePoint(e);
+        var newZoom = gestureZoomStart - 1 + e.scale;
+        setNewZoom(newZoom, point);
+    };
+    var onGestureEnd = function (e) {
+        cleanEvents();
     };
     var onDragStart = function (_a) {
         var x = _a.x, y = _a.y;
