@@ -803,11 +803,14 @@ var Cropper = function (_a) {
     }, [src]);
     useEffect(function () {
         window.addEventListener('resize', imgResize);
+        window.addEventListener('wheel', onWheel, { passive: false });
         window.addEventListener('gesturestart', onGestureStart);
         imgResize();
         return function () {
             window.removeEventListener('resize', imgResize);
             window.removeEventListener('gesturestart', preventZoomSafari);
+            cleanEvents();
+            clearScrollEvent();
         };
     }, [aspect]);
     var preventZoomSafari = function (e) { return e.preventDefault(); };
@@ -916,6 +919,9 @@ var Cropper = function (_a) {
         document.removeEventListener('gesturemove', onGestureMove);
         document.removeEventListener('gestureend', onGestureEnd);
     };
+    var clearScrollEvent = function () {
+        document.removeEventListener('wheel', onWheel);
+    };
     var onDragStopped = function () {
         cleanEvents();
         emitCropData();
@@ -976,6 +982,7 @@ var Cropper = function (_a) {
         cropRef.current = newPosition;
     };
     var onWheel = function (e) {
+        e.preventDefault();
         var point = getMousePoint(e);
         var pixelY = normalizeWheel(e).pixelY;
         var newZoom = zoomRef.current - pixelY / 200;
@@ -994,9 +1001,7 @@ var Cropper = function (_a) {
         }
     };
     var onTouchMove = function (e) {
-        // Prevent whole page from scrolling on iOS.
-        if (e.cancelable)
-            e.preventDefault();
+        e.preventDefault();
         setOnEvent(true);
         if (e.touches.length === 2) {
             onPinchMove(e);
@@ -1067,7 +1072,7 @@ var Cropper = function (_a) {
             lastPinchDistance.current = distance;
         });
     };
-    return (React.createElement("div", { className: "cropper-container", ref: containerRef, onMouseDown: function (e) { return onMouseDown(e); }, onTouchStart: function (e) { return onTouchStart(e); }, onWheel: function (e) { return onWheel(e); }, style: {
+    return (React.createElement("div", { className: "cropper-container", ref: containerRef, onMouseDown: function (e) { return onMouseDown(e); }, onTouchStart: function (e) { return onTouchStart(e); }, style: {
             width: "".concat(width === 0 ? (aspect > 1 ? "".concat(100 / aspect, "%") : '100%') : "".concat(cropSize.width, "px")),
             height: "".concat(cropSize.height === 0 ? '100%' : "".concat(cropSize.height, "px")),
             cursor: "".concat(onEvent ? 'grabbing' : 'grab'),

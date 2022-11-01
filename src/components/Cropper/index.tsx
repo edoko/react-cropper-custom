@@ -76,11 +76,14 @@ const Cropper: FC<CropperProps> = ({
 
   useEffect(() => {
     window.addEventListener('resize', imgResize);
+    window.addEventListener('wheel', onWheel, { passive: false });
     window.addEventListener('gesturestart', onGestureStart as EventListener);
     imgResize();
     return () => {
       window.removeEventListener('resize', imgResize);
       window.removeEventListener('gesturestart', preventZoomSafari);
+      cleanEvents();
+      clearScrollEvent();
     };
   }, [aspect]);
 
@@ -198,6 +201,10 @@ const Cropper: FC<CropperProps> = ({
     document.removeEventListener('gestureend', onGestureEnd as EventListener);
   };
 
+  const clearScrollEvent = () => {
+    document.removeEventListener('wheel', onWheel);
+  };
+
   const onDragStopped = () => {
     cleanEvents();
     emitCropData();
@@ -270,7 +277,8 @@ const Cropper: FC<CropperProps> = ({
     cropRef.current = newPosition;
   };
 
-  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+  const onWheel = (e: WheelEvent) => {
+    e.preventDefault();
     const point = getMousePoint(e);
     const { pixelY } = normalizeWheel(e);
     const newZoom = zoomRef.current - pixelY / 200;
@@ -290,8 +298,7 @@ const Cropper: FC<CropperProps> = ({
   };
 
   const onTouchMove = (e: TouchEvent) => {
-    // Prevent whole page from scrolling on iOS.
-    if (e.cancelable) e.preventDefault();
+    e.preventDefault();
     setOnEvent(true);
     if (e.touches.length === 2) {
       onPinchMove(e);
@@ -377,7 +384,6 @@ const Cropper: FC<CropperProps> = ({
       ref={containerRef}
       onMouseDown={(e) => onMouseDown(e)}
       onTouchStart={(e) => onTouchStart(e)}
-      onWheel={(e) => onWheel(e)}
       style={{
         width: `${
           width === 0 ? (aspect > 1 ? `${100 / aspect}%` : '100%') : `${cropSize.width}px`
